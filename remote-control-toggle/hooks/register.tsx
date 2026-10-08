@@ -122,7 +122,15 @@ async function toggle($: EngineInterface) {
   }
 }
 
-export const register: Register = on => {
+function footerLabel(state: RcState): string | undefined {
+  if (state.status !== 'on' && state.status !== 'off') return undefined
+  const clients = clientsText(state.clients, ', ')
+
+  return `Remote Control ${state.status}${clients}`
+}
+
+export const register: Register = (on, options) => {
+  const placement = options.placement === 'band' ? 'band' : 'footer'
   let poll: { cancel: () => void } | undefined
 
   on('session.start', async ($, e, next) => {
@@ -165,8 +173,18 @@ export const register: Register = on => {
     return left
   })
 
+  // Default: one more dim label in the footer under the prompt, beside the
+  // engine's own modes; it takes no row of its own.
+  on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
+    if (placement !== 'footer') return next(e)
+    const label = footerLabel(await read($, rc))
+    if (!label) return next(e)
+
+    return next({ ...e, props: { ...e.props, modes: [...e.props.modes, label] } })
+  })
+
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (e.props.hasSurvey) return next(e)
+    if (placement !== 'band' || e.props.hasSurvey) return next(e)
     const state = await read($, rc)
     const { Box, Button, Text } = $.ui.resolve(e)
 

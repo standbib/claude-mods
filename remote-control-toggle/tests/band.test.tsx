@@ -15,6 +15,7 @@ const PROPS = {
 } as const
 const TYPED = { args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } } as const
 const SURFACES = ['terminal', 'desktop'] as const
+const BAND = { options: { placement: 'band' } } as const
 
 function rcCommand(description: string): CommandInfo {
   return { name: 'remote-control', description, source: 'builtin' }
@@ -53,9 +54,9 @@ function engine(on: On, bridge: () => string | undefined, env: Record<string, st
 
 const start = { cwd: '/tmp', isInteractive: true }
 
-describe('terminal: the button toggles /remote-control', () => {
+describe('band: the button toggles /remote-control in the terminal', () => {
   for (const surface of SURFACES) {
-    test(`off, then on, then off by pressing (${surface})`, async ($, on) => {
+    test(`off, then on, then off by pressing (${surface})`, BAND, async ($, on) => {
       mock.clock(on)
       let bridgeId: string | undefined
       const runs: string[] = []
@@ -84,7 +85,7 @@ describe('terminal: the button toggles /remote-control', () => {
     })
   }
 
-  test('follows the person typing /rc, and the poll catches a drop', async ($, on) => {
+  test('follows the person typing /rc, and the poll catches a drop', BAND, async ($, on) => {
     const clock = mock.clock(on)
     let bridgeId: string | undefined
     engine(on, () => bridgeId)
@@ -110,8 +111,8 @@ describe('terminal: the button toggles /remote-control', () => {
   })
 })
 
-describe('desktop app: no /remote-control in the command list', () => {
-  test('reads on and off from the session file, and says what to type', async ($, on) => {
+describe('band in the desktop app: no /remote-control in the command list', () => {
+  test('reads on and off from the session file, and says what to type', BAND, async ($, on) => {
     const clock = mock.clock(on)
     let bridgeId: string | undefined
     engine(on, () => bridgeId)
@@ -170,7 +171,7 @@ describe('/rc-status and the edges', () => {
     expect(text).toBe('Remote Control is off.')
   })
 
-  test('a cloud session says it is not available', async ($, on) => {
+  test('a cloud session says it is not available', BAND, async ($, on) => {
     mock.clock(on)
     engine(on, () => undefined, { CLAUDE_CODE_REMOTE: 'true' })
     on('command.list', () => ({ value: [] }))
@@ -179,5 +180,53 @@ describe('/rc-status and the edges', () => {
     const ui = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'AbovePrompt', props: PROPS })
     expect(await ui.find({ type: 'Text', text: /not available in a cloud session/ })).toBeDefined()
     expect(await ui.find({ key: 'toggle' })).toBeUndefined()
+  })
+})
+
+// The engine's own footer beneath the plugin: its mode labels, as drawn.
+function footer(on: On) {
+  on('ui.render', { component: 'SessionMode' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>{e.props.modes.join(' & ')}</Text>
+  })
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return <Text>engine band</Text>
+  })
+}
+
+describe('footer (the default): a label under the prompt, no band', () => {
+  for (const surface of SURFACES) {
+    test(`shows off, then on, beside the engine's modes (${surface})`, async ($, on) => {
+      const clock = mock.clock(on)
+      let bridgeId: string | undefined
+      engine(on, () => bridgeId)
+      footer(on)
+      on('command.list', () => ({ value: surface === 'terminal' ? [rcCommand(bridgeId ? ON : OFF)] : [] }))
+      on('session.surfaces', () => ({ value: [surface] }))
+
+      await $.session.start({ ...start, surface })
+      const modes = await $.ui.mount({ plugin: PLUGIN, surface, component: 'SessionMode', props: { modes: ['auto mode on'] } })
+      expect((await modes.find({ type: 'Text' }))?.text).toBe('auto mode on & Remote Control off')
+
+      bridgeId = 'cse_9'
+      await clock.advance(3000)
+      expect((await modes.find({ type: 'Text' }))?.text).toBe('auto mode on & Remote Control on')
+
+      const band = await $.ui.mount({ plugin: PLUGIN, surface, component: 'AbovePrompt', props: PROPS })
+      expect((await band.find({ type: 'Text', text: 'engine band' }))?.text).toBe('engine band')
+      expect(await band.find({ text: /Remote Control/ })).toBeUndefined()
+    })
+  }
+
+  test('a cloud session adds no label', async ($, on) => {
+    mock.clock(on)
+    engine(on, () => undefined, { CLAUDE_CODE_REMOTE: 'true' })
+    footer(on)
+    on('command.list', () => ({ value: [] }))
+    on('session.surfaces', () => ({ value: [] }))
+    await $.session.start({ ...start, surface: 'desktop' })
+    const modes = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'SessionMode', props: { modes: [] } })
+    expect((await modes.find({ type: 'Text' }))?.text).toBe('')
   })
 })

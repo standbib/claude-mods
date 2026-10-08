@@ -12,4 +12,4 @@ on in every terminal session.
 
 | Mod | What it does |
 | --- | --- |
-| `remote-control-toggle` | A band above the prompt that shows whether Remote Control is on, how many clients are attached, and a button that toggles it. Adds `/rc-status`. |
+| `remote-control-toggle` | Shows whether Remote Control is on, as a label in the footer under the prompt (or a band with a toggle button). Adds `/rc-status`. |

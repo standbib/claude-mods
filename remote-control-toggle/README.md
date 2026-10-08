@@ -1,9 +1,12 @@
 # remote-control-toggle
 
-A Claude Code mod for the terminal: a one-line band above the prompt that shows
-whether Remote Control is on, how many phones or web clients are attached, and a
-button that turns it on or off (same as typing `/rc`). `/rc-status` prints the
-same line as text.
+A Claude Code mod that shows whether Remote Control is on for the current session.
+
+By default it adds a small dim label to the footer row under the prompt, next to
+the model and mode labels: "Remote Control off", or "Remote Control on" plus the
+number of attached phones. It takes no space from the conversation. `/rc-status`
+prints the same thing as text. Turn Remote Control on or off by typing
+`/remote-control` (or `/rc`) as usual.
 
 Install once, from any terminal session of Claude Code:
 
@@ -12,22 +15,26 @@ Install once, from any terminal session of Claude Code:
 ```
 
 Answer `y` to add the marketplace, then pick the user scope. It is active from
-then on in every terminal session.
+then on in the terminal and in local sessions of the Claude desktop app.
 
-To run it from a checkout instead while developing:
+## A band with a button instead
 
-```
-claude --plugin-dir ./remote-control-toggle
-```
+Set **placement** to `band` in `/config` to get a row above the prompt instead.
+In the terminal that row has a Turn on / Turn off button (hotkey `r` when the
+band has focus). The desktop app runs `/remote-control` itself, so there the band
+shows the state and tells you what to type.
 
-Checks: `claude plugin validate .` at the repo root (reads the marketplace and the
-mod) and `claude plugin test ./remote-control-toggle`.
-
-It works in the terminal and in local sessions of the Claude desktop app. In the
-desktop app the band shows on or off but has no button, because the app runs
-`/remote-control` itself: type it in the prompt to switch. Remote Control is not
-available inside cloud sessions, and the band says so there.
+## How it knows
 
 The on/off state comes from this session's record in `~/.claude/sessions/`
 (or `$CLAUDE_CONFIG_DIR/sessions/`), which Claude Code updates whenever Remote
-Control connects or disconnects. The band re-checks every 3 seconds.
+Control connects or disconnects. The mod re-checks every 3 seconds. Remote
+Control is not available inside cloud sessions, and the mod shows nothing there.
+
+## Developing
+
+```
+claude --plugin-dir ./remote-control-toggle
+claude plugin validate .
+claude plugin test ./remote-control-toggle
+```
