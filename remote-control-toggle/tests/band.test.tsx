@@ -24,6 +24,11 @@ function rcCommand(description: string): CommandInfo {
 // The engine beneath the plugin: a home folder holding this session's file
 // (and another session's), whose bridgeSessionId `bridge()` reports.
 function engine(on: On, bridge: () => string | undefined, env: Record<string, string> = {}) {
+  const statuses: (string | undefined)[] = []
+  on('ui.status', ($, e) => {
+    statuses.push(e.text)
+    return { value: undefined }
+  })
   mock.env(on, { HOME: '/home/me', ...env })
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   on('session.id', () => ({ value: SESSION }))
@@ -50,6 +55,8 @@ function engine(on: On, bridge: () => string | undefined, env: Record<string, st
     }
     throw new Error(`no such file ${e.path}`)
   })
+
+  return statuses
 }
 
 const start = { cwd: '/tmp', isInteractive: true }
@@ -228,5 +235,50 @@ describe('footer (the default): a label under the prompt, no band', () => {
     await $.session.start({ ...start, surface: 'desktop' })
     const modes = await $.ui.mount({ plugin: PLUGIN, surface: 'desktop', component: 'SessionMode', props: { modes: [] } })
     expect((await modes.find({ type: 'Text' }))?.text).toBe('')
+  })
+})
+
+describe('desktop app: a status line under its prompt', () => {
+  test('sends off, then on, then off, each once', async ($, on) => {
+    const clock = mock.clock(on)
+    let bridgeId: string | undefined
+    const statuses = engine(on, () => bridgeId)
+    on('command.list', () => ({ value: [] }))
+    on('session.surfaces', () => ({ value: ['desktop'] }))
+
+    await $.session.start({ ...start, surface: 'desktop' })
+    await clock.settle()
+    expect(statuses).toEqual(['Remote Control off'])
+
+    await clock.advance(3000)
+    expect(statuses).toEqual(['Remote Control off'])
+
+    bridgeId = 'cse_7'
+    await clock.advance(3000)
+    expect(statuses).toEqual(['Remote Control off', 'Remote Control on'])
+
+    bridgeId = undefined
+    await clock.advance(3000)
+    expect(statuses).toEqual(['Remote Control off', 'Remote Control on', 'Remote Control off'])
+  })
+
+  test('the terminal gets no status line, only the footer label', async ($, on) => {
+    const clock = mock.clock(on)
+    const statuses = engine(on, () => 'cse_1')
+    on('command.list', () => ({ value: [rcCommand(ON)] }))
+    on('session.surfaces', () => ({ value: ['terminal'] }))
+    await $.session.start({ ...start, surface: 'terminal' })
+    await clock.advance(3000)
+    expect(statuses.filter(text => text !== undefined)).toEqual([])
+  })
+
+  test('the band setting sends no status line', BAND, async ($, on) => {
+    const clock = mock.clock(on)
+    const statuses = engine(on, () => 'cse_1')
+    on('command.list', () => ({ value: [] }))
+    on('session.surfaces', () => ({ value: ['desktop'] }))
+    await $.session.start({ ...start, surface: 'desktop' })
+    await clock.advance(3000)
+    expect(statuses.filter(text => text !== undefined)).toEqual([])
   })
 })

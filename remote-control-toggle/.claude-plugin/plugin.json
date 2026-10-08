@@ -1,6 +1,6 @@
 {
   "name": "remote-control-toggle",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Shows whether Remote Control is on, in the prompt footer (or a band with a toggle button)",
   "types": "./types/index.d.ts",
   "author": {

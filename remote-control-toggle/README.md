@@ -2,9 +2,11 @@
 
 A Claude Code mod that shows whether Remote Control is on for the current session.
 
-By default it adds a small dim label to the footer row under the prompt, next to
-the model and mode labels: "Remote Control off", or "Remote Control on" plus the
-number of attached phones. It takes no space from the conversation. `/rc-status`
+By default it shows a small line under the prompt: "Remote Control off", or
+"Remote Control on" plus the number of attached phones. In the terminal it is a
+dim label in the footer row next to the mode labels. In the desktop app it is the
+mod's status line, which the app draws under its prompt. Neither takes space from
+the conversation. `/rc-status`
 prints the same thing as text. Turn Remote Control on or off by typing
 `/remote-control` (or `/rc`) as usual.
 

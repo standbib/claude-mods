@@ -13,6 +13,19 @@ const rc = atom({ plugin: 'remote-control-toggle', key: 'rc' } as const, {
   isPending: false,
 } as RcState)
 
+// 'footer' (default) or 'band', from the plugin's placement option.
+let placement: 'footer' | 'band' = 'footer'
+
+// The desktop app draws a plugin's status line under its prompt, not the
+// terminal's footer labels; the last line sent, so an unchanged one is not resent.
+let sentStatus: string | undefined | null = null
+
+function sendStatus($: EngineInterface, text: string | undefined) {
+  if (text === sentStatus) return
+  sentStatus = text
+  $.ui.status(text)
+}
+
 // The session's own record in <config>/sessions/<pid>.json. Claude Code writes
 // bridgeSessionId there while Remote Control is connected and clears it after,
 // in the terminal and in the desktop app alike.
@@ -71,6 +84,7 @@ async function bridgeFromSessionFile($: EngineInterface): Promise<boolean | unde
 async function refresh($: EngineInterface): Promise<RcState['status']> {
   if ((await $.env.get('CLAUDE_CODE_REMOTE')) === 'true') {
     await update($, rc, state => ({ ...state, status: 'unavailable' as const, canToggle: false }))
+    sendStatus($, undefined)
 
     return 'unavailable'
   }
@@ -89,7 +103,9 @@ async function refresh($: EngineInterface): Promise<RcState['status']> {
   const isKnown = fromFile !== undefined || command !== undefined || Boolean(fromEnv)
   const status: RcState['status'] = isOn ? 'on' : isKnown ? 'off' : 'unknown'
   const clients = surfaces.filter(s => s === 'mobile').length
-  await update($, rc, state => ({ ...state, status, clients, canToggle: command !== undefined }))
+  const next = await update($, rc, state => ({ ...state, status, clients, canToggle: command !== undefined }))
+  const isDesktopApp = surfaces.includes('desktop') && !surfaces.includes('terminal')
+  sendStatus($, placement === 'footer' && isDesktopApp ? footerLabel(next) : undefined)
 
   return status
 }
@@ -130,7 +146,8 @@ function footerLabel(state: RcState): string | undefined {
 }
 
 export const register: Register = (on, options) => {
-  const placement = options.placement === 'band' ? 'band' : 'footer'
+  placement = options.placement === 'band' ? 'band' : 'footer'
+  sentStatus = null
   let poll: { cancel: () => void } | undefined
 
   on('session.start', async ($, e, next) => {
@@ -173,8 +190,8 @@ export const register: Register = (on, options) => {
     return left
   })
 
-  // Default: one more dim label in the footer under the prompt, beside the
-  // engine's own modes; it takes no row of its own.
+  // Default, terminal: one more dim label in the footer under the prompt,
+  // beside the engine's own modes; it takes no row of its own.
   on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
     if (placement !== 'footer') return next(e)
     const label = footerLabel(await read($, rc))
