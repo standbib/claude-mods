@@ -1,0 +1,6 @@
+{
+  "name": "voice-check",
+  "version": "0.1.0",
+  "description": "Holds Notion writes that contain meta commentary and sends them back to Claude to rewrite",
+  "author": { "name": "standbib" }
+}

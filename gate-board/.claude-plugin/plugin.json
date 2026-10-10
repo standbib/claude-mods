@@ -1,0 +1,6 @@
+{
+  "name": "gate-board",
+  "version": "0.1.0",
+  "description": "A /gate pane: open PRs with checks and panel status, what main has that Supabase isn't running, and merges since the last Lovable publish",
+  "author": { "name": "standbib" }
+}

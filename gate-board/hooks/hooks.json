@@ -1,0 +1,4 @@
+{
+  "description": "The gate-board hooks module",
+  "modules": ["./register.mjs"]
+}

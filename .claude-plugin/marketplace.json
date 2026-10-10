@@ -1,8 +1,21 @@
 {
   "name": "standbib-mods",
   "description": "Claude Code mods by standbib",
-  "owner": { "name": "standbib" },
+  "owner": {
+    "name": "standbib"
+  },
   "plugins": [
-    { "name": "remote-control-toggle", "source": "./remote-control-toggle" }
+    {
+      "name": "remote-control-toggle",
+      "source": "./remote-control-toggle"
+    },
+    {
+      "name": "gate-board",
+      "source": "./gate-board"
+    },
+    {
+      "name": "voice-check",
+      "source": "./voice-check"
+    }
   ]
 }
